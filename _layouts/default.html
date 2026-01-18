@@ -9,14 +9,13 @@
     {% seo %}
 
     <link rel="shortcut icon" type="image/x-icon" href="{{site.baseurl}}/{{site.favicon}}">
- <!-- Jquery on header to make sure everything works, the rest  of the scripts in footer for fast loading -->
-    <script
-    src="{{site.baseurl}}/assets/js/jquery-3.3.1.min.js" async=""></script>
+    <!-- Jquery on header to make sure everything works -->
+    <script src="{{site.baseurl}}/assets/js/jquery-3.3.1.min.js"></script>
     <script src="{{site.baseurl}}/assets/js/darkreader.js"></script>
-    <script src="{{site.baseurl}}/assets/js/bootstrap.min.js.map" async=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
 
     <script src="{{site.baseurl}}/assets/js/theme.js"></script>
-    <script src="{{site.baseurl}}/assets/js/popper.min.js.map.js" async=""></script>
     <script src="{{site.baseurl}}/assets/js/darkmode.js"></script>
 
     {% if jekyll.environment == 'production' %}

@@ -1,7 +1,13 @@
-jekyll:
-    image: jekyll/jekyll:latest
-    command: jekyll serve --force_polling
+version: '3.8'
+
+services:
+  jekyll:
+    build: .
     ports:
-        - 4000:4000
+      - "2255:2255"
+      - "35729:35729" # Port for livereload
     volumes:
-        - .:/srv/jekyll
+      - .:/srv/jekyll
+    command: bundle exec jekyll serve --host 0.0.0.0 --port 2255 --force_polling --livereload --baseurl "" --trace
+    environment:
+      - JEKYLL_ENV=development
