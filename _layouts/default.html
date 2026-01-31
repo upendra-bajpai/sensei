@@ -80,16 +80,16 @@
                 const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
                 const themeVariables = {
-                    'primaryColor': '#00a4f5a8',         // Darker, high-contrast green
+                    'primaryColor': '#00a4f5',         // High-contrast Cyan
                     'primaryTextColor': '#ffffff',      // Pure white text
-                    'primaryBorderColor': isDarkMode ? '#ffffff' : '#014d3a',
+                    'primaryBorderColor': isDarkMode ? '#ffffff' : '#007bb8',
                     'lineColor': isDarkMode ? '#ffffff' : '#212529',
-                    'secondaryColor': '#028663',
+                    'secondaryColor': '#7832e2',
                     'secondaryTextColor': '#ffffff',
                     'tertiaryColor': 'transparent',    // Remove "slaty" backgrounds
-                    'nodeBorder': isDarkMode ? '#ffffff' : '#016d51',
+                    'nodeBorder': isDarkMode ? '#ffffff' : '#007bb8',
                     'clusterBkg': isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                    'clusterBorder': isDarkMode ? '#016d51' : '#028663',
+                    'clusterBorder': isDarkMode ? '#007bb8' : '#00a4f5',
                     'titleColor': isDarkMode ? '#ffffff' : '#212529',
                     'edgeLabelBackground': isDarkMode ? '#212529' : '#ffffff',
                     'fontFamily': '"Segoe UI", Arial, sans-serif'
@@ -132,16 +132,19 @@
                     {% include menu-header.html %}
                 </ul>
                 <ul class="navbar-nav ml-auto d-flex align-items-center">
-                    {% include search-google.html %}
+                    <!-- Search Form -->
+                    <li class="nav-item position-relative">
+                        <input type="text" id="search-input" class="form-control" placeholder="Search..."
+                            style="min-width: 200px;">
+                        <div id="results-container" class="position-absolute bg-white shadow rounded p-2"
+                            style="top: 100%; right: 0; min-width: 300px; z-index: 1000; display: none;"></div>
+                    </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <!-- Search Results -->
-    <div id="lunrsearchresults">
-        <ul class="mb-0"></ul>
-    </div>
+    <!-- Search Results Container is now dynamically handled -->
 
     <!-- Content -->
     <main role="main" class="site-content">
@@ -193,6 +196,37 @@
 
 
 
+    <!-- Simple Jekyll Search -->
+    <script src="{{site.baseurl}}/assets/js/simple-jekyll-search.min.js"></script>
+    <script>
+        var sjs = SimpleJekyllSearch({
+            searchInput: document.getElementById('search-input'),
+            resultsContainer: document.getElementById('results-container'),
+            json: '{{site.baseurl}}/search.json',
+            searchResultTemplate: '<div class="p-2 border-bottom"><a href="{url}" class="d-block text-dark font-weight-bold">{title}</a><span class="small text-muted">{date}</span></div>',
+            noResultsText: '<div class="p-2">No results found</div>',
+            limit: 10,
+            fuzzy: false
+        })
+
+        // Toggle results container visibility
+        const searchInput = document.getElementById('search-input');
+        const resultsContainer = document.getElementById('results-container');
+
+        searchInput.addEventListener('input', function () {
+            if (this.value.length > 0) {
+                resultsContainer.style.display = 'block';
+            } else {
+                resultsContainer.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+                resultsContainer.style.display = 'none';
+            }
+        });
+    </script>
 </body>
 
 </html>
