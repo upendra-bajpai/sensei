@@ -1,9 +1,9 @@
 # Site
-name: 'UpNotes'
+name: 'System Sensei'
 description: 'Learning never stops'
 logo: 'assets/images/logo.png'
 favicon: 'assets/images/favicon.ico'
-baseurl: '/upnotes'
+baseurl: '/sensei'
 ganalytics: 'G-Y699GMLWNL'
 disqus: 'geekypandaml'
 email: 'tronsamtron@yandex.com'

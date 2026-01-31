@@ -1,0 +1,30 @@
+---
+layout: null
+---
+{
+  "documents": [
+    {% assign counter = 0 %}
+    {% for page in site.pages %}
+      {% unless page.url contains '.xml' or page.url contains 'assets' %}
+        {% if counter > 0 %},{% endif %}
+        {
+          "id": {{ counter }},
+          "url": "{{ site.url | default: '' }}{{ site.baseurl | default: '' }}{{ page.url }}",
+          "title": "{{ page.title | default: '' | escape }}",
+          "body": "{{ page.content | markdownify | strip_html | strip_newlines | replace: '  ', ' ' | replace: '"', ' ' | escape }}"
+        }
+        {% assign counter = counter | plus: 1 %}
+      {% endunless %}
+    {% endfor %}
+    {% for page in site.posts %}
+      {% if counter > 0 %},{% endif %}
+      {
+        "id": {{ counter }},
+        "url": "{{ site.url | default: '' }}{{ site.baseurl | default: '' }}{{ page.url }}",
+        "title": "{{ page.title | default: '' | escape }}",
+        "body": "{{ page.date | date: "%Y/%m/%d" }} - {{ page.content | markdownify | strip_html | strip_newlines | replace: '  ', ' ' | replace: '"', ' ' | escape }}"
+      }
+      {% assign counter = counter | plus: 1 %}
+    {% endfor %}
+  ]
+}

@@ -7,7 +7,17 @@ document.addEventListener('DOMContentLoaded', (event) => {
             sepia: 0,
             scheme: 'dark'
         });
-    }else{
+
+        // Add a global style safely inside the head to prevent inversions
+        const style = document.createElement('style');
+        style.textContent = `
+            .mermaid, .mermaid *, svg.mermaid-svg, svg.mermaid-svg * {
+                filter: none !important;
+                -webkit-filter: none !important;
+            }
+        `;
+        document.head.appendChild(style);
+    } else {
         DarkReader.disable()
     }
 });
