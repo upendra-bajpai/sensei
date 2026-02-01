@@ -3,7 +3,7 @@ layout: post
 title: Networking Understanding TCP vs UDP and their use cases in real-time systems (HLD)
 author: jane
 date: 2026-02-01 09:00:00
-categories: [ networking:, HLD, system-design ]
+categories: [ networking, HLD, system-design ]
 image: /assets/images/2026-02-01-networking-understanding-tcp-vs-udp-and-their-use-cases-in-real-time-systems-hld-diagram-1.png
 ---
 

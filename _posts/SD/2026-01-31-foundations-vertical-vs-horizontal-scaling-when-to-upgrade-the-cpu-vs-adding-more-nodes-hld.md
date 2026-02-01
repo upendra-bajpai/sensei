@@ -3,7 +3,7 @@ layout: post
 title: Foundations Vertical vs Horizontal Scaling - When to upgrade the CPU vs adding more nodes (HLD)
 author: jane
 date: 2026-01-31 09:00:00
-categories: [ foundations:, HLD, system-design ]
+categories: [ foundations, HLD, system-design ]
 image: /assets/images/2026-01-31-foundations-vertical-vs-horizontal-scaling-when-to-upgrade-the-cpu-vs-adding-more-nodes-hld-diagram-1.png
 ---
 
