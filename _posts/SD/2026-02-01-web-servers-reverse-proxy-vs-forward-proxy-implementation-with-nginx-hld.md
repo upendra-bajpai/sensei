@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Web Servers: Reverse Proxy vs Forward Proxy - Implementation with Nginx (HLD)
+title: Web Servers Reverse Proxy vs Forward Proxy - Implementation with Nginx (HLD)
 author: jane
 date: 2026-02-01 09:00:00
 categories: [ servers:, HLD, system-design ]

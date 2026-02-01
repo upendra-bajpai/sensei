@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Networking: Understanding TCP vs UDP and their use cases in real-time systems (LLD)
+title: Networking Understanding TCP vs UDP and their use cases in real-time systems (LLD)
 author: jane
 date: 2026-02-01 09:00:00
 categories: [ networking:, LLD, system-design ]
