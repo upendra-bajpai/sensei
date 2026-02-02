@@ -31,17 +31,13 @@ We can think of Contexts as scopes of authority. The complexity arises because A
 
 To understand where leaks happen, we must visualize the relationship between different Context types. Most developers interact with `ContextWrapper`, but the underlying implementation determines the lifecycle boundaries.
 
-<img src="/assets/images/2026-01-30-the-android-context-maze-when-to-use-application-activity-vs-service-context-to-avoid-leaks-hld-diagram-1.png" alt="System Architecture Diagram 1" style="max-width: 100%; height: auto; display: block; margin: 20px auto;" />
+<img src="/sensei//assets/images/2026-01-30-the-android-context-maze-when-to-use-application-activity-vs-service-context-to-avoid-leaks-hld-diagram-1.png" alt="System Architecture Diagram 1" style="max-width: 100%; height: auto; display: block; margin: 20px auto;" />
 
 In this flow, an `Activity` is a specialized `ContextThemeWrapper`. If you pass an `Activity` into a long-running background thread or a Singleton, you are effectively preventing the garbage collector from reclaiming the entire UI hierarchy, including ViewModels, Bitmaps, and View instances.
 
 ---
 
 ## Technical Deep Dive: Production-Grade Implementation
-
-### Prerequisites & Assumptions
-*   **Skill Level**: Senior Android Developer / Architect.
-*   **Environment**: Android 12+ (API 31+), Kotlin Coroutines, Hilt/Dagger for DI.
 
 ### Establishing the Single Source of Truth
 The most effective way to avoid the "Context Maze" is to enforce **Dependency Injection (DI)** boundaries. Logic should be hoisted out of the UI layer, and the correct Context should be injected based on the consumer's lifecycle.
