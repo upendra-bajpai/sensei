@@ -1,6 +1,6 @@
 ---
 layout: post
-title: The Android Context Maze: When to use Application, Activity, vs Service Context to avoid leaks (HLD)
+title: The Android Context Maze When to use Application, Activity, vs Service Context to avoid leaks (HLD)
 author: jane
 date: 2026-01-30 09:00:00
 categories: [ android, HLD, tech-deep-dive ]
