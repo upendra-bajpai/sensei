@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Deep Dive into Low-Level Android: How Zygote Process and SystemServer start your App (HLD)
+title: Deep Dive into Low-Level Android How Zygote Process and SystemServer start your App (HLD)
 author: jane
 date: 2026-01-30 09:00:00
 categories: [ deep, HLD, tech-deep-dive ]

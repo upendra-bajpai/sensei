@@ -1,9 +1,9 @@
 ---
 layout: post
-title: Mastering Jetpack Compose Side-Effects: When to use LaunchedEffect vs DisposableEffect vs SideEffect (HLD)
+title: Mastering Jetpack Compose Side-Effects When to use LaunchedEffect vs DisposableEffect vs SideEffect (HLD)
 author: jane
 date: 2026-01-30 09:00:00
-categories: [ mastering, HLD, tech-deep-dive ]
+categories: [ Jetpack Compose, HLD, tech-deep-dive ]
 image: /assets/images/2026-01-30-mastering-jetpack-compose-side-effects-when-to-use-launchedeffect-vs-disposableeffect-vs-sideeffect-hld-diagram-1.png
 ---
 

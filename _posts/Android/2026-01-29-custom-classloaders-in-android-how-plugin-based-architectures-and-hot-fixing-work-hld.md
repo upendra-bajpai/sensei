@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Custom ClassLoaders in Android: How Plugin-based architectures and Hot-Fixing work (HLD)
+title: Custom ClassLoaders in Android How Plugin-based architectures and Hot-Fixing work (HLD)
 author: jane
 date: 2026-01-29 09:00:00
 categories: [ custom, HLD, tech-deep-dive ]
