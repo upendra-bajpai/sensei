@@ -1,6 +1,6 @@
 ---
 layout: post
-title: The Lifecycle of a View: From Measure and Layout to the Hardware Renderer (HLD)
+title: The Lifecycle of a View From Measure and Layout to the Hardware Renderer (HLD)
 author: jane
 date: 2026-01-29 09:00:00
 categories: [ lifecycle, HLD, tech-deep-dive ]

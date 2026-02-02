@@ -1,9 +1,9 @@
 ---
 layout: post
-title: Reliability: Versioning your APIsâ€”Backwards compatibility strategies for Apps (HLD)
+title: Reliability Versioning your APIsâ€”Backwards compatibility strategies for Apps (HLD)
 author: jane
 date: 2026-01-29 09:00:00
-categories: [ reliability:, HLD, tech-deep-dive ]
+categories: [ reliability, HLD, tech-deep-dive ]
 image: assets/images/4.jpg
 ---
 
