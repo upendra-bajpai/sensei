@@ -3,134 +3,154 @@ layout: post
 title: How Disney Hotstar (now JioHotstar) Scaled Its Infra for 60 Million Concurrent Users (HLD)
 author: jane
 date: 2026-02-15 09:00:00
-categories: [ disney, HLD, tech-deep-dive ]
-image: /assets/images/2026-02-15-how-disney-hotstar-now-jiohotstar-scaled-its-infra-for-60-million-concurrent-users-hld-diagram-1.png
+categories: [ disney, HLD, system-design ]
+image: assets/images/4.jpg
 ---
 
-The streaming world is a relentless battleground for user attention. Millions of eyes glued to screens, demanding seamless experiences. Back in 2023, Disney+ Hotstar (now JioHotstar) faced a monumental challenge: supporting an unprecedented 50 to 60 million concurrent live streams. This wasn't just about adding more servers; it was about a fundamental architectural overhaul to handle this sheer scale, especially with a "Free on Mobile" initiative that opened the floodgates.
+Let's break down how a platform like JioHotstar (formerly Hotstar) handles massive concurrent viewership, which can peak at tens of millions of users. Imagine an interviewer asking you about this.
 
-### The Vision & The Why: Scaling Beyond the Limit
+**Interviewer:** "So, you're tasked with designing a system to support a live streaming service that needs to handle 60 million concurrent users during a major sporting event. How would you approach this?"
 
-The engineering teams at Hotstar were staring down a beast. Their existing infrastructure, while robust, was maxing out around 25 million concurrent users on two self-managed Kubernetes clusters. Simply throwing more hardware at the problem wasn't a sustainable or cost-effective solution. The vision was clear: build an "X architecture" – a server-driven, flexible, and globally scalable system capable of absorbing massive, unpredictable traffic spikes without faltering.
+**Interviewee:** "That's a significant scale! Before I dive into the design, I have a few clarifying questions to ensure we're aligned on the core requirements."
 
-This wasn't just about keeping pace; it was about staying ahead. The business imperative was to provide a flawless viewing experience, no matter the event or the user count. This meant a significant shift in how they approached infrastructure, networking, and application deployment. It required a move from a reactive scaling model to a proactive, architecturally sound foundation.
+**Clarifying Questions:**
 
-### Theoretical Blueprint & Mental Models: The "X Architecture"
+1.  **User Experience:** What are the critical user journeys we need to support? Primarily video playback, but what about other features like live chat, polls, or user authentication?
+2.  **Content Type:** Are we primarily dealing with live streaming, Video on Demand (VOD), or a mix? Live streaming often has different scaling characteristics.
+3.  **Geographic Distribution:** Where are these 60 million users located? Global distribution implies CDN strategies and regional data centers.
+4.  **Device Types:** What kind of devices will users be accessing from? This impacts bandwidth requirements and client-side handling.
+5.  **Latency Requirements:** What's the acceptable latency for critical operations, like starting a stream or responding to a user interaction?
+6.  **Peak vs. Average Load:** Is the 60 million concurrent user figure a sustained peak, or does it represent a very short burst? Understanding the ramp-up and ramp-down is crucial.
+7.  **New Features:** Are there any new or experimental features being launched during this event that might put additional strain on the system?
 
-At its core, Hotstar's journey was about evolving from a traditional, often siloed, infrastructure setup to a more abstract, adaptable model. Think of it as moving from managing individual rooms in a house to managing a smart, interconnected ecosystem.
+**Interviewer:** "Great questions. Let's assume:
+*   **Primary focus:** Live streaming of a major cricket match.
+*   **User Base:** Primarily concentrated in India, but with a global CDN for international viewers.
+*   **Latency:** Low latency for stream start-up and playback is critical. We want users to see the action as it happens.
+*   **Peak Load:** The 60 million concurrent users is a sustained peak for a few hours.
+*   **Other Features:** Basic authentication and a real-time score update service are also required."
 
-Here’s a simplified look at the core components and their roles:
+**Functional Requirements:**
 
-<img src="/assets/images/2026-02-15-how-disney-hotstar-now-jiohotstar-scaled-its-infra-for-60-million-concurrent-users-hld-diagram-1.png" alt="System Architecture Diagram 1" style="max-width: 100%; height: auto; display: block; margin: 20px auto;" />
+*   User authentication and authorization.
+*   Stream video content (live and potentially VOD).
+*   Provide real-time score updates.
+*   Handle high concurrent user load.
 
-The key shift was the introduction of **"Data Center Abstraction."** This wasn't about physical data centers, but logical groupings of Kubernetes clusters that acted as a single, cohesive compute unit. This abstraction simplified operations immensely, allowing teams to focus on applications rather than the underlying cluster specifics.
+**Non-Functional Requirements:**
 
-Let's break down the legacy versus the modern approach:
+*   **Availability:** High availability, aiming for 99.99% uptime during the event.
+*   **Scalability:** Ability to scale horizontally to handle 60M+ concurrent users.
+*   **Latency:** Low latency for stream start-up and playback. Score updates should be near real-time.
+*   **Durability:** User session data and playback state should be durable.
+*   **Consistency:** Eventual consistency is acceptable for non-critical data like user profiles, but stream state and playback position might require stronger consistency.
 
-| Feature             | Legacy Way (Pre-2023)                                | Modern Way (Post-2023)                                     | Key Difference                                        |
-| :------------------ | :--------------------------------------------------- | :--------------------------------------------------------- | :---------------------------------------------------- |
-| **Orchestration**   | Self-managed Kubernetes (KOPS)                       | Amazon EKS (Managed Kubernetes)                            | Offloaded control plane complexity to AWS             |
-| **Networking**      | NAT Gateway per AZ, NodePort services                | NAT Gateway per subnet, ClusterIP with ALB Ingress         | Improved network efficiency, eliminated port conflicts |
-| **Service Discovery** | Manual configurations, DNS-based                    | Centralized Envoy Gateway, automated service discovery     | Simplified routing, dynamic load balancing            |
-| **Deployment**      | Multiple environment-specific manifests               | Single unified manifest template ("One Manifest")          | Reduced duplication, faster, safer deployments        |
-| **Infrastructure Mgmt** | Manual ALB management, pre-warming                 | Data Center Abstraction, automated routing & security      | Simplified operations, cluster-agnostic deployments   |
-| **Scalability Trigger** | Reactive scaling                                     | Predictive AI scaling, pre-warming                         | Proactive capacity management                         |
+---
 
-### Technical Deep Dive: The Nitty-Gritty of Scaling
+### High-Level Design: Scaling for Millions of Viewers
 
-The transformation involved tackling several critical layers:
+Okay, let's sketch out a blueprint for this. The core idea is to distribute the load effectively and ensure each component can scale independently.
 
-**1. Gateway Optimization: Separating Concerns**
+**Path of a Request (Simplified):**
 
-The initial bottleneck was often at the CDN and API Gateway layers. CDNs were doing more than just caching; they were handling security checks and routing. The team identified that not all API requests were equal.
+1.  **User Request:** A user wants to watch the stream.
+2.  **DNS Resolution:** DNS directs the user to the nearest CDN edge server or a regional load balancer.
+3.  **CDN:** For static assets (UI, player) and potentially video segments, the CDN serves them efficiently.
+4.  **Load Balancer:** Distributes incoming API requests (authentication, stream initiation, score updates) across application servers.
+5.  **Application Servers:** Handle business logic, user authentication, stream session management, and fetching data.
+6.  **Caching Layer:** Stores frequently accessed data (user profiles, stream metadata) to reduce database load.
+7.  **Database:** Stores persistent user data, stream configurations, and potentially session information.
+8.  **Streaming Servers/Media Servers:** Deliver the actual video segments to the user's player. These are specialized for high-throughput media delivery.
+9.  **Real-time Score Service:** A dedicated service for delivering score updates, likely using WebSockets or similar low-latency push mechanisms.
 
-*   **Prerequisites**: Understanding of CDN capabilities, API Gateway patterns, and traffic analysis tools.
-*   **Assumptions**: Access to traffic logs and performance metrics.
+**Core Components & Choices:**
 
-The breakthrough was **separating cacheable APIs from non-cacheable ones.**
+*   **CDN (Content Delivery Network):** Essential for delivering static content and video segments globally with low latency. This offloads a massive amount of traffic from our origin servers.
+*   **Global Load Balancers (e.g., AWS Route 53, Cloudflare):** To route users to the closest healthy region or data center.
+*   **Regional Load Balancers (e.g., ALB, NLB):** Distribute traffic within a data center or region to application servers.
+*   **API Gateway/Edge Proxy (e.g., Envoy, Nginx):** A central point for managing API requests, rate limiting, authentication, and routing to microservices.
+*   **Application Servers (Microservices):** Stateless services responsible for user management, authentication, stream session management, and orchestrating requests. We'd likely use containerization (e.g., Kubernetes) for easy scaling and management.
+*   **Caching Layer (e.g., Redis, Memcached):** To cache frequently accessed data like user session details, stream metadata, and popular content information. This drastically reduces latency and database load.
+*   **Database (e.g., PostgreSQL, Cassandra):** For persistent storage. Given the scale, a horizontally scalable NoSQL database like Cassandra might be suitable for session data, while a relational DB could handle user profiles and configurations. Read replicas would be crucial.
+*   **Streaming Servers (e.g., Nginx RTMP, Wowza, custom media servers):** Optimized for serving video segments (HLS/DASH). These need massive bandwidth and efficient I/O.
+*   **Real-time Score Service (e.g., using WebSockets, Kafka + WebSockets):** To push score updates instantly. Kafka can buffer these updates, and a WebSocket service can fan them out to connected clients.
 
-*   **Cacheable APIs**: Data that doesn't change rapidly (e.g., live scores, match summaries). These could be served from a dedicated, lighter CDN domain with simplified security rules.
-*   **Non-Cacheable APIs**: Personalized data, session management – these required fresh computation.
+**High-Level Architecture Diagram:**
 
-This segregation significantly boosted throughput by reducing the load on edge servers and optimizing request processing. They also fine-tuned refresh rates for less critical data and simplified complex CDN rules.
+```mermaid
+graph TD
+    User[User/Client] --> DNS[DNS Resolution]
+    DNS --> CDN[CDN Edge Servers]
+    CDN --> User
+    DNS --> GLB[Global Load Balancer]
+    GLB --> RLB[Regional Load Balancer]
+    RLB --> APIGW[API Gateway / Edge Proxy]
 
-**2. Infrastructure Scaling Layers: Untangling the Network**
+    APIGW --> AuthSvc[Auth Service]
+    APIGW --> StreamSvc[Stream Mgmt Service]
+    APIGW --> ScoreSvc[Score Update Service]
 
-*   **Prerequisites**: Deep understanding of AWS networking (VPCs, Subnets, NAT Gateways), Kubernetes networking (Services, NodePort, ClusterIP), and EC2 instance types.
-*   **Assumptions**: Familiarity with VPC Flow Logs for traffic analysis.
+    AuthSvc --> UserDB[(User Database)]
+    StreamSvc --> StreamMetaDB[(Stream Metadata DB)]
+    StreamSvc --> SessionCache[Session Cache (Redis)]
+    ScoreSvc --> Kafka[Kafka Cluster]
 
-**NAT Gateway Scaling:**
-The initial setup used one NAT Gateway per Availability Zone. This created a significant bottleneck when one cluster generated disproportionately high traffic. The solution? **Migrating to one NAT Gateway per subnet.** This distributed the load more effectively, preventing single points of failure.
+    Kafka --> ScoreFanout[Score Fan-out Service (WebSockets)]
+    ScoreFanout --> User
 
-**Kubernetes Worker Nodes:**
-High-bandwidth services were overloading individual worker nodes. The fix involved:
-*   Switching to **high-throughput EC2 instances** capable of handling 10 Gbps+ traffic.
-*   Implementing **Kubernetes topology spread constraints** to ensure only one gateway pod ran per node, preventing network contention. This kept throughput balanced at a healthy 2-3 Gbps per node.
+    StreamSvc --> MediaServers[Media Servers (HLS/DASH)]
+    MediaServers --> User
 
-**3. EKS Migration: Embracing Managed Services**
+    %% Internal Dependencies
+    AuthSvc --> SessionCache
+    StreamSvc --> SessionCache
+    StreamSvc --> StreamMetaDB
+```
 
-*   **Prerequisites**: Experience with Kubernetes, AWS EKS, and cluster management concepts.
-*   **Assumptions**: Understanding of Kubernetes control plane vs. data plane.
+**Jimmy's Anti-Pattern:** A common mistake here is to try and build a single, monolithic application that does everything. While simple initially, it becomes a massive bottleneck for scaling and deployment. Another is relying solely on a single database instance for all read/write operations, which will quickly buckle under this load.
 
-The move from self-managed KOPS clusters to **Amazon EKS** was crucial. AWS managing the control plane (the brain of Kubernetes) freed up Hotstar’s engineers to focus on the data plane (where applications run).
+---
 
-While EKS offered significant advantages, they encountered **API server throttling** at extreme scales (beyond 400 nodes). The solution was **stepwise scaling**: instead of adding hundreds of nodes at once, they implemented a phased approach (100-300 nodes per step), allowing the control plane to manage the influx gracefully.
+### Deep Dive: Scaling the Core Services
 
-**4. "Data Center Abstraction": The Architectural Game Changer**
+Let's zoom into two critical areas: **Auto-Scaling for API Servers** and **Handling Real-time Score Updates**.
 
-*   **Prerequisites**: Strong grasp of Kubernetes, microservices, and distributed system design patterns.
-*   **Assumptions**: Familiarity with service mesh concepts (like Envoy).
+**1. Auto-Scaling API Servers**
 
-This was the linchpin. By treating multiple EKS clusters within a region as a single logical unit, they:
+*   **Challenge:** We need to dynamically adjust the number of API servers (Auth, Stream Mgmt) based on incoming request volume to handle 60M users without over-provisioning.
+*   **Strategy:** Kubernetes Horizontal Pod Autoscaler (HPA) is our go-to tool.
+    *   **Metrics:** We'll monitor CPU utilization and potentially custom metrics like "requests per second per pod" or "active stream sessions per pod."
+    *   **Target:** Define a target CPU utilization (e.g., 70%) or RPS per pod. When metrics exceed this, HPA will automatically increase the number of pods. When they drop, it scales them down.
+    *   **Node Scaling:** Complement HPA with cluster autoscaler (e.g., Karpenter for EKS) to ensure there are enough underlying nodes (VMs/EC2 instances) to run the scaled-up pods.
+    *   **Pre-warming:** For predictable spikes (like the start of a match), we can use scheduled scaling or proactive scaling based on historical data to pre-warm the cluster *before* the peak hits, minimizing cold starts. This involves pre-allocating nodes and ensuring application pods are ready.
+    *   **Pod Anti-Affinity:** Configure Kubernetes to spread pods across different nodes and availability zones to prevent a single node failure from taking down a significant portion of our API capacity.
 
-*   **Simplified Deployments**: Made them cluster-agnostic.
-*   **Unified Management**: Enabled centralized routing, security, and observability.
-*   **Reduced Overhead**: Allowed teams to focus on applications.
+**2. Real-time Score Updates (Kafka + WebSockets)**
 
-Key innovations within this model included:
+*   **Challenge:** Delivering score updates to potentially millions of connected users simultaneously with minimal delay.
+*   **Architecture:**
+    *   **Ingestion:** The score update service (likely receiving data from a dedicated feed or match engine) publishes score changes as messages to a Kafka topic.
+    *   **Kafka:** Acts as a highly scalable, durable buffer. We'd partition the Kafka topic logically (e.g., by match ID or even by user segment if needed) to distribute the load.
+    *   **Score Fan-out Service:** A fleet of services responsible for consuming from Kafka and pushing updates to connected clients via WebSockets.
+        *   **Scaling:** This service needs to scale horizontally based on the number of active WebSocket connections and the rate of incoming Kafka messages.
+        *   **Connection Management:** Each service instance manages thousands of persistent WebSocket connections. Careful connection pooling and management are key.
+        *   **Fan-out Logic:** When a new score update arrives from Kafka, the fan-out service broadcasts it to all connected clients interested in that specific match.
+*   **Consistency:** Kafka provides at-least-once delivery. The fan-out service might need logic to handle potential duplicates if the client doesn't acknowledge receipt, but for score updates, slight duplication is often acceptable or handled by the client simply processing the latest value.
+*   **Back-of-the-Envelope Estimation:**
+    *   **API Servers:** If each API server pod handles, say, 10,000 RPS and we need to serve 500,000 RPS peak for API requests (authentication, stream setup), we'd need around 50 API server pods. With buffer, maybe 70-100 pods.
+    *   **Kafka:** Need enough brokers and partitions to handle the write load from the score service and the read load from the fan-out service. If scores update every few seconds, and we have millions of users, Kafka needs to be robust.
+    *   **WebSocket Connections:** If 80% of users (48 million) are actively watching, and each connection is relatively lightweight, we might need millions of concurrent WebSocket connections. The fan-out service needs to scale to manage this, perhaps with 1000s of instances.
 
-*   **Central Envoy Proxy Layer**: Replaced hundreds of individual ALBs with a single, shared fleet of Envoy proxies. This handled routing, authentication, rate limiting, and service discovery for all internal traffic.
-*   **Standardized Service Endpoints**: Introduced a consistent naming convention (`<service>.internal.<domain>`) for inter-service communication, simplifying discovery and management.
-*   **"One Manifest"**: A single, unified Kubernetes manifest template for all environments, drastically reducing configuration duplication and deployment errors.
-*   **Eliminating NodePort**: Migrated from NodePort services to ClusterIP services managed by the AWS ALB Ingress Controller. This removed the port exhaustion issue and streamlined the traffic flow.
+---
 
-### The "Production Gap": From PoC to 60 Million
+### Future Improvements and Bottlenecks
 
-A Proof of Concept (PoC) is just the beginning. The real work lies in hardening the architecture for production. For Hotstar, this meant addressing:
+*   **Monitoring & Alerting:** Comprehensive monitoring across all services is paramount. Metrics for request latency, error rates, CPU/memory usage, Kafka lag, WebSocket connection counts, and CDN cache hit ratios are essential. Alerts should trigger auto-scaling or notify on-call engineers.
+*   **Rate Limiting:** Implement robust rate limiting at the API Gateway to protect backend services from traffic spikes or abuse.
+*   **Graceful Degradation:** If certain services are overloaded, the system should degrade gracefully (e.g., disable non-critical features like chat temporarily) rather than fail completely.
+*   **Database Sharding:** For massive datasets, the database will likely need sharding to distribute data and load across multiple instances.
+*   **Caching Strategies:** Fine-tune cache invalidation and TTLs to balance freshness and performance. Consider distributed caching solutions.
+*   **Chaos Engineering:** Proactively inject failures (e.g., kill pods, introduce latency) in a controlled environment to test resilience and auto-scaling mechanisms before a live event.
+*   **A/B Testing:** For new features or optimizations, use A/B testing to roll them out gradually and measure impact.
 
-*   **Scalability**: Implementing adaptive streaming logic to adjust bitrates based on network conditions, ensuring a stable experience even with fluctuating bandwidth. This also involved intelligent client-side behavior like exponential backoff to prevent overwhelming the backend during peak load.
-*   **Reliability**: Building multi-level redundancy across clusters and services. If one cluster faced an issue, traffic could seamlessly shift to another. Implementing robust state restoration mechanisms was critical for handling unexpected events like process restarts or node failures.
-*   **Edge Cases**:
-    *   **Deep Linking**: Ensuring users could jump directly to specific content or live moments, even after multiple redirects or in app updates.
-    *   **Configuration Changes**: Managing dynamic configurations across thousands of nodes without service interruption.
-    *   **Zero-Downtime Deployments**: Employing blue-green or canary deployment strategies for all microservices.
-
-### Architectural Anti-patterns & "Nightmares"
-
-As Senior Leads, we often see recurring issues in production reviews. Here are a few common "nightmares" related to scaling and navigation, along with how to avoid them:
-
-1.  **"The Monolithic Navigator": Passing `NavController` Down the Tree**
-    *   **The Problem**: Injecting the `NavController` deep into UI components creates tight coupling. Changes to navigation structure require widespread code modifications, making refactoring a nightmare and breaking testability.
-    *   **Senior Lead Tip**: **Dependency Injection and Navigation Events.** Inject abstractions or use a shared state/event bus for navigation actions. The UI component should *trigger* navigation, not *perform* it directly.
-
-2.  **"Scattered Navigation Logic": Bits of Navigation Everywhere**
-    *   **The Problem**: Navigation logic sprinkled across Activities, Fragments, ViewModels, and UI Composables. It's impossible to get a clear picture of the app's flow, leading to bugs and inconsistent behavior.
-    *   **Senior Lead Tip**: **Centralized Navigation Manager.** Maintain a single source of truth for navigation state and actions. This could be a dedicated `NavigationManager` class or a state-driven approach managed by a ViewModel.
-
-3.  **"Ignoring State Restoration": The Great Reset on Process Death**
-    *   **The Problem**: When an app process is killed by the OS (due to low memory), crucial navigation state (like the current screen or back stack) is lost. Users are unexpectedly returned to the app's entry point.
-    *   **Senior Lead Tip**: **Leverage SavedStateHandle and ViewModel.** For Jetpack Compose Navigation, ensure your navigation arguments are `Parcelable` or use `SavedStateHandle` to persist state across process death. ViewModels should be designed to restore their state.
-
-4.  **"Deep Linking Without a Strategy": A Maze of `Intent`s**
-    *   **The Problem**: Deep links are implemented in a fragmented way, often with complex conditional logic scattered across Activities/Fragments. Handling complex nested navigation or parameters becomes unmanageable.
-    *   **Senior Lead Tip**: **Use a Unified Deep Link Resolver.** Implement a central handler that parses incoming deep links, validates them, and triggers the appropriate navigation action via your centralized manager. Leverage navigation graph features for declarative deep link handling.
-
-### The 2026 Roadmap: Future-Proofing the Architecture
-
-The work Hotstar did was foundational. Looking ahead, the focus shifts to continuous refinement and embracing future technologies:
-
-*   **KMP (Kotlin Multiplatform) Integration**: As more platforms adopt Kotlin, sharing navigation logic between Android, iOS, and potentially desktop clients becomes a significant advantage.
-*   **On-Device AI Integration**: For features like personalized recommendations or real-time content analysis, running AI models directly on the device could reduce backend load and improve latency. Navigation needs to seamlessly integrate with these on-device capabilities.
-*   **Declarative Navigation Evolution**: Further embracing Jetpack Compose Navigation's declarative nature for even more robust and maintainable UI and navigation logic.
-
-The Hotstar story is a testament to architectural foresight and relentless execution. By moving beyond simple scaling and embracing abstraction, modularity, and managed services, they built an infrastructure that didn't just handle millions of concurrent users—it set a new standard for live streaming reliability.
+This covers the foundational design. The real magic happens in the continuous tuning, monitoring, and iterative improvements based on real-world performance data.
