@@ -128,7 +128,7 @@ Let's make some assumptions:
         *   $$ 41.7 \text{ million QPS} \times (\text{small payload for counts, e.g., 32 bytes}) \approx 1.3 \text{ GB/s} $$
     *   **Cross-Region Replication Bandwidth:**
         *   This is a significant cost. If we replicate all writes to N regions, the bandwidth is N times the single-region write bandwidth. Assuming 3 major regions (e.g., US, EU, Asia), and replicating all writes:
-        *   $$ \text{Replication Bandwidth} \approx (\text{Total Write QPS}) \times (\text{Average Event Size}) \times (\text{# of regions to replicate to}) $$
+        *   $$ \text{Replication Bandwidth} \approx (\text{Total Write QPS}) \times (\text{Average Event Size}) \times (\text{\# of regions to replicate to}) $$
         *   Let's assume we replicate all writes to 2 other regions for active-active setup.
         *   Total write QPS = 3.5M. Average event size = (10B * 50B + 50B * 200B) / 60B = (500GB + 10TB) / 60B ≈ 176 bytes.
         *   $$ \text{Replication Bandwidth} \approx 3.5 \text{ million QPS} \times 176 \text{ bytes/event} \times 2 \text{ regions} \approx 1.2 \text{ GB/s} $$
@@ -216,50 +216,50 @@ We'll design a simple, efficient API for recording events and retrieving counts.
 
 ```mermaid
 graph LR
-    Client[Client App] --> Edge[Edge CDN/PoP]
-    Edge --> WAF[WAF]
-    WAF --> LB_API[API LB]
+    Client["Client App"] --> Edge["Edge CDN/PoP"]
+    Edge --> WAF["WAF"]
+    WAF --> LB_API["API LB"]
 
-    LB_API --> Service_Like[Like Service]
-    LB_API --> Service_View[View Service]
-    LB_API --> Service_Count[Count Service]
+    LB_API --> Service_Like["Like Service"]
+    LB_API --> Service_View["View Service"]
+    LB_API --> Service_Count["Count Service"]
 
-    Service_Like --> Cache_Write[Write Cache]
+    Service_Like --> Cache_Write["Write Cache"]
     Service_View --> Cache_Write
-    Service_Count --> Cache_Read[Read Cache]
+    Service_Count --> Cache_Read["Read Cache"]
 
-    Cache_Write --> Queue[Message Queue<br>(Kafka/Pulsar)]
+    Cache_Write --> Queue["Message Queue<br>(Kafka/Pulsar)"]
 
-    Queue --> Worker_Like[Like Worker]
-    Queue --> Worker_View[View Worker]
+    Queue --> Worker_Like["Like Worker"]
+    Queue --> Worker_View["View Worker"]
 
-    Worker_Like --> DB_Like[Likes DB<br>(Cassandra/ScyllaDB)]
-    Worker_View --> DB_View[Views DB<br>(Cassandra/ScyllaDB)]
+    Worker_Like --> DB_Like["Likes DB<br>(Cassandra/ScyllaDB)"]
+    Worker_View --> DB_View["Views DB<br>(Cassandra/ScyllaDB)"]
 
-    Service_Count --> DB_Count[Counts DB<br>(Redis/Aerospike)]
+    Service_Count --> DB_Count["Counts DB<br>(Redis/Aerospike)"]
 
-    DB_Like --> Aggregator[Aggregation Service]
+    DB_Like --> Aggregator["Aggregation Service"]
     DB_View --> Aggregator
 
-    Aggregator --> Queue_Agg[Aggregation Queue]
-    Queue_Agg --> Worker_Agg[Aggregation Worker]
+    Aggregator --> Queue_Agg["Aggregation Queue"]
+    Queue_Agg --> Worker_Agg["Aggregation Worker"]
     Worker_Agg --> DB_Count
 
     %% Multi-Region Replication
-    subgraph Multi-Region Replication
-        Queue -- Replicate --> Queue_Region2[Message Queue<br>Region 2]
-        Queue -- Replicate --> Queue_Region3[Message Queue<br>Region 3]
-        DB_Like -- Replicate --> DB_Like_R2[Likes DB<br>Region 2]
-        DB_Like -- Replicate --> DB_Like_R3[Likes DB<br>Region 3]
-        DB_View -- Replicate --> DB_View_R2[Views DB<br>Region 2]
-        DB_View -- Replicate --> DB_View_R3[Views DB<br>Region 3]
-        DB_Count -- Replicate --> DB_Count_R2[Counts DB<br>Region 2]
-        DB_Count -- Replicate --> DB_Count_R3[Counts DB<br>Region 3]
+    subgraph "Multi-Region Replication"
+        Queue -- Replicate --> Queue_Region2["Message Queue<br>Region 2"]
+        Queue -- Replicate --> Queue_Region3["Message Queue<br>Region 3"]
+        DB_Like -- Replicate --> DB_Like_R2["Likes DB<br>Region 2"]
+        DB_Like -- Replicate --> DB_Like_R3["Likes DB<br>Region 3"]
+        DB_View -- Replicate --> DB_View_R2["Views DB<br>Region 2"]
+        DB_View -- Replicate --> DB_View_R3["Views DB<br>Region 3"]
+        DB_Count -- Replicate --> DB_Count_R2["Counts DB<br>Region 2"]
+        DB_Count -- Replicate --> DB_Count_R3["Counts DB<br>Region 3"]
     end
 
     %% Observability
     subgraph Observability
-        Service_Like --> Metrics[Metrics Collector]
+        Service_Like --> Metrics["Metrics Collector"]
         Service_View --> Metrics
         Service_Count --> Metrics
         Worker_Like --> Metrics
@@ -270,14 +270,14 @@ graph LR
         DB_Count --> Metrics
         Queue --> Metrics
 
-        Service_Like --> Tracing[Distributed Tracing]
+        Service_Like --> Tracing["Distributed Tracing"]
         Service_View --> Tracing
         Service_Count --> Tracing
         Worker_Like --> Tracing
         Worker_View --> Tracing
         Worker_Agg --> Tracing
 
-        Service_Like --> Logging[Structured Logging]
+        Service_Like --> Logging["Structured Logging"]
         Service_View --> Logging
         Service_Count --> Logging
         Worker_Like --> Logging

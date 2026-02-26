@@ -3,7 +3,9 @@ layout: default
 ---
 {% assign author = site.authors[page.author] %}
 <div class="container">
-	<script type="text/javascript" async src="https://cdnjs.cloudflare.com"></script>
+	<!-- KaTeX for LaTeX rendering -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+
 	<div class="jumbotron jumbotron-fluid mb-3 pl-0 pt-0 pb-0 bg-white position-relative">
 		<div class="h-100 tofront">
 			<div class="row {% if page.image %} justify-content-between {% else %} justify-content-center {% endif %}">
@@ -190,3 +192,27 @@ layout: default
 		</div>
 	</div>
 </div>
+
+<!-- KaTeX Initialization -->
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		console.log("KaTeX: Initializing...");
+		var article = document.querySelector('.article-post');
+		if (article) {
+			renderMathInElement(article, {
+				delimiters: [
+					{ left: '$$', right: '$$', display: true },
+					{ left: '$', right: '$', display: false },
+					{ left: '\\(', right: '\\)', display: false },
+					{ left: '\\[', right: '\\]', display: true }
+				],
+				throwOnError: false
+			});
+			console.log("KaTeX: Rendering complete.");
+		} else {
+			console.error("KaTeX: Article element not found!");
+		}
+	});
+</script>

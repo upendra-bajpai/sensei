@@ -48,7 +48,8 @@
         /* Ensure labels are ALWAYS white and bold on top of our nodes */
         .mermaid .node text,
         .mermaid .node tspan,
-        .mermaid .label text {
+        .mermaid .label text,
+        .mermaid div.label {
             fill: #ffffff !important;
             color: #ffffff !important;
             font-weight: 700 !important;
@@ -65,28 +66,17 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             if (typeof mermaid !== 'undefined') {
-                // Find all mermaid code blocks and convert them
-                const mermaidBlocks = document.querySelectorAll('pre code.language-mermaid');
-                mermaidBlocks.forEach((block) => {
-                    const pre = block.parentElement;
-                    const div = document.createElement('div');
-                    div.className = 'mermaid';
-                    // Attribute for DarkReader protection
-                    div.setAttribute('data-darkreader-ignore', '');
-                    div.textContent = block.textContent;
-                    pre.replaceWith(div);
-                });
+                console.log('Mermaid: Initializing...');
 
                 const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
                 const themeVariables = {
-                    'primaryColor': '#00a4f5',         // High-contrast Cyan
-                    'primaryTextColor': '#ffffff',      // Pure white text
+                    'primaryColor': '#00a4f5',
+                    'primaryTextColor': '#ffffff',
                     'primaryBorderColor': isDarkMode ? '#ffffff' : '#007bb8',
                     'lineColor': isDarkMode ? '#ffffff' : '#212529',
                     'secondaryColor': '#7832e2',
                     'secondaryTextColor': '#ffffff',
-                    'tertiaryColor': 'transparent',    // Remove "slaty" backgrounds
+                    'tertiaryColor': 'transparent',
                     'nodeBorder': isDarkMode ? '#ffffff' : '#007bb8',
                     'clusterBkg': isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
                     'clusterBorder': isDarkMode ? '#007bb8' : '#00a4f5',
@@ -95,19 +85,51 @@
                     'fontFamily': '"Segoe UI", Arial, sans-serif'
                 };
 
-                mermaid.initialize({
-                    startOnLoad: false,
-                    theme: 'base',
-                    themeVariables: themeVariables,
-                    securityLevel: 'loose',
-                    flowchart: {
-                        useMaxWidth: true,
-                        htmlLabels: false, // SVG labels are easier to protect against DarkReader
-                        curve: 'basis'
-                    }
-                });
+                try {
+                    mermaid.initialize({
+                        startOnLoad: false,
+                        theme: 'base',
+                        themeVariables: themeVariables,
+                        securityLevel: 'loose',
+                        maxTextSize: 100000,
+                        flowchart: {
+                            useMaxWidth: true,
+                            htmlLabels: true,
+                            curve: 'basis'
+                        }
+                    });
 
-                mermaid.run();
+                    // Find all mermaid code blocks and convert them
+                    const mermaidBlocks = document.querySelectorAll('pre code.language-mermaid');
+                    console.log('Mermaid: Found ' + mermaidBlocks.length + ' blocks.');
+
+                    const nodes = [];
+                    mermaidBlocks.forEach((block, index) => {
+                        const pre = block.parentElement;
+                        const div = document.createElement('div');
+                        div.className = 'mermaid';
+                        div.id = 'mermaid-render-' + index;
+                        div.setAttribute('data-darkreader-ignore', '');
+                        // Get clean text content, handling potential extra spaces
+                        div.textContent = block.textContent.trim();
+                        pre.replaceWith(div);
+                        nodes.push(div);
+                    });
+
+                    if (nodes.length > 0) {
+                        mermaid.run({
+                            nodes: nodes
+                        }).then(() => {
+                            console.log('Mermaid: Rendering complete.');
+                        }).catch((err) => {
+                            console.error('Mermaid: Error during run:', err);
+                        });
+                    }
+                } catch (err) {
+                    console.error('Mermaid: Initialization failed:', err);
+                }
+            } else {
+                console.error('Mermaid: Library not loaded!');
             }
         });
     </script>
